@@ -1,8 +1,8 @@
 package com.shepardcmd.javadbupd;
 
-import java.util.List;
+import java.util.stream.Stream;
 
 @FunctionalInterface
 public interface ChangeSetProvider {
-    List<AbstractChangeSet> provideChangeSets();
+    Stream<AbstractChangeSet> provideChangeSets();
 }

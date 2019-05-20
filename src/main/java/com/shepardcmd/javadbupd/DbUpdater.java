@@ -1,13 +1,11 @@
 package com.shepardcmd.javadbupd;
 
-import com.shepardcmd.javadbupd.AbstractChangeSet;
-import com.shepardcmd.javadbupd.ChangeSetProvider;
-import com.shepardcmd.javadbupd.UpdateResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -56,7 +54,10 @@ public class DbUpdater {
     }
 
     private List<AbstractChangeSet> getChangeSets(int initVersion) {
-        return null;
+        return changeSetProviders.stream()
+                .flatMap(ChangeSetProvider::provideChangeSets)
+                .filter(changeSet -> changeSet.getVersion() >= initVersion)
+                .collect(Collectors.toList());
     }
 
     private int getLastChangeSetVersion() {
