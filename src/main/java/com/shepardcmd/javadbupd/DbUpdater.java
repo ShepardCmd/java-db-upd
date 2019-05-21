@@ -20,6 +20,7 @@ public class DbUpdater {
     private final String historyTableName;
     private final List<ChangeSetProvider> changeSetProviders;
 
+    // TODO: save history
     public synchronized void update() {
         try (Connection connection = dataSource.getConnection()) {
             int currentVersion = getCurrentDbVersion(connection);
