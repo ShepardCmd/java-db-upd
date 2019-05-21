@@ -1,4 +1,4 @@
-package com.shepardcmd.javadbupd.sql;
+package com.shepardcmd.javadbupd.changeset;
 
 import com.shepardcmd.javadbupd.AbstractChangeSet;
 import com.shepardcmd.javadbupd.UpdateResult;

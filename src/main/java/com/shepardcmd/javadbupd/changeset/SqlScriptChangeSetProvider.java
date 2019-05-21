@@ -1,10 +1,9 @@
-package com.shepardcmd.javadbupd.sql;
+package com.shepardcmd.javadbupd.changeset;
 
 import com.shepardcmd.javadbupd.AbstractChangeSet;
 import com.shepardcmd.javadbupd.ChangeSetProvider;
-import com.shepardcmd.javadbupd.DbUpdaterBuilder;
 
-import java.util.List;
+import java.util.stream.Stream;
 
 public class SqlScriptChangeSetProvider implements ChangeSetProvider {
 
@@ -22,7 +21,7 @@ public class SqlScriptChangeSetProvider implements ChangeSetProvider {
     }
 
     @Override
-    public List<AbstractChangeSet> provideChangeSets() {
+    public Stream<AbstractChangeSet> provideChangeSets() {
         return null;
     }
 }

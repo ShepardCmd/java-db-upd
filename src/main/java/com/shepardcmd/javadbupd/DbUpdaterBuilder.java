@@ -6,6 +6,7 @@ import java.util.List;
 
 public class DbUpdaterBuilder {
     private boolean exitOnError = true;
+    private String historyTableName = "db_history";
     private DataSource dataSource;
     private List<ChangeSetProvider> changeSetProviders = new ArrayList<>(2);
 
@@ -24,6 +25,11 @@ public class DbUpdaterBuilder {
         return this;
     }
 
+    public DbUpdaterBuilder setHistoryTableName(String historyTableName) {
+        this.historyTableName = historyTableName;
+        return this;
+    }
+
     public DbUpdater build() {
         if (changeSetProviders.isEmpty()) {
             throw new IllegalStateException("You must set at least one ChangeSetProvider!");
@@ -31,6 +37,9 @@ public class DbUpdaterBuilder {
         if (dataSource == null) {
             throw new IllegalStateException("You must provide a DataSource!");
         }
-        return new DbUpdater(dataSource, exitOnError, changeSetProviders);
+        if (historyTableName == null || historyTableName.trim().isEmpty()) {
+            throw new IllegalStateException("History table name must not be null or empty! Whether specify valid table name or don't override default value.");
+        }
+        return new DbUpdater(dataSource, exitOnError, historyTableName, changeSetProviders);
     }
 }
