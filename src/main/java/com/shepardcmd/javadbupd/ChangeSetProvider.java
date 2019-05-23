@@ -4,5 +4,5 @@ import java.util.stream.Stream;
 
 @FunctionalInterface
 public interface ChangeSetProvider {
-    Stream<AbstractChangeSet> provideChangeSets();
+    Stream<ChangeSet> provideChangeSets();
 }

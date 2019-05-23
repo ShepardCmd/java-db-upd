@@ -5,9 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -20,46 +19,50 @@ public class DbUpdater {
     private final String historyTableName;
     private final List<ChangeSetProvider> changeSetProviders;
 
-    // TODO: save history
     public synchronized void update() {
+        log.info("Starting database update...");
         try (Connection connection = dataSource.getConnection()) {
-            int currentVersion = getCurrentDbVersion(connection);
-            int version = currentVersion + 1;
+            HistoryWriter historyWriter = new HistoryWriter(historyTableName, connection);
+            historyWriter.prepareHistoryTable();
 
-            List<AbstractChangeSet> changeSets = getChangeSets(version);
-            Optional<Integer> lastVersionOptional = getLastChangeSetVersion(changeSets);
-            if (!lastVersionOptional.isPresent()) {
-                log.info("Couldn't find any change sets.");
+            int currentVersion = historyWriter.getCurrentDbVersion();
+            List<ChangeSet> changeSets = getChangeSets(currentVersion + 1);
+            if (changeSets == null || changeSets.isEmpty()) {
+                log.info("Database is already up to date, current version: {}", currentVersion);
                 return;
             }
-            int lastVersion = lastVersionOptional.get();
-            if (lastVersion >= currentVersion) {
-                log.info("Database is already up to date. Current version: {}", currentVersion);
-                return;
-            }
-            if (changeSets.size() != lastVersion - currentVersion) {
-                log.error("Unexpected change sets count with version above {}! Expected {} change sets.", currentVersion, lastVersion - currentVersion);
+            if (!validateVersions(changeSets, currentVersion)) {
+                log.error("Change sets versions order is broken! Please, make sure that all change set versions are positive integers, and there are no gaps between versions.");
                 checkExitOnError();
                 return;
             }
-
-            for (AbstractChangeSet changeSet : changeSets) {
-                if (changeSet.getVersion() != version) {
-                    log.error("Change sets order is broken! Expected next change set with version {}, but got version {}", version, changeSet.getVersion());
+            for (ChangeSet changeSet : changeSets) {
+                log.debug("Running change set {} with version {}", changeSet.name(), changeSet.version());
+                Date startTime = new Date();
+                try {
+                    changeSet.execute();
+                    historyWriter.saveUpdateResult(new UpdateResult(changeSet.version(), changeSet.name(), startTime, new Date(), true));
+                } catch (Throwable t) {
+                    log.error("Error during change set {} execution: {}", changeSet.name(), t);
+                    historyWriter.saveUpdateResult(new UpdateResult(changeSet.version(), changeSet.name(), startTime, new Date(), false));
                     checkExitOnError();
                     return;
                 }
-                UpdateResult result = changeSet.execute();
-                log.info("Change set executed with result {}", result);
-                if (!result.isSuccessful()) {
-                    checkExitOnError();
-                    return;
-                }
-                version++;
+                log.debug("Successfully executed change set {} with version {}", changeSet.name(), changeSet.version());
             }
-        } catch (SQLException e) {
-            log.error("Got SQLException during database update: ", e);
+        } catch (Throwable t) {
+            log.error("Database update failed with error: ", t);
+            checkExitOnError();
         }
+    }
+
+    private boolean validateVersions(List<ChangeSet> changeSets, int currentVersion) {
+        for (ChangeSet changeSet : changeSets) {
+            if (changeSet.version() != ++currentVersion) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void checkExitOnError() {
@@ -69,25 +72,16 @@ public class DbUpdater {
         }
     }
 
-    private List<AbstractChangeSet> getChangeSets(int initVersion) {
+    private List<ChangeSet> getChangeSets(int initVersion) {
         return changeSetProviders.stream()
                 .flatMap(ChangeSetProvider::provideChangeSets)
-                .filter(changeSet -> changeSet.getVersion() >= initVersion)
+                .filter(changeSet -> changeSet.version() >= initVersion)
                 .collect(Collectors.toList());
     }
 
-    private Optional<Integer> getLastChangeSetVersion(List<AbstractChangeSet> changeSets) {
+    private Optional<Integer> getLastChangeSetVersion(List<ChangeSet> changeSets) {
         return changeSets.stream()
-                .max(Comparator.comparingInt(AbstractChangeSet::getVersion))
-                .map(AbstractChangeSet::getVersion);
-    }
-
-    private int getCurrentDbVersion(Connection connection) throws SQLException {
-        final String getDbVersionQuery = "SELECT max(version) FROM " + historyTableName + " WHERE successful = TRUE;";
-        ResultSet resultSet = connection.createStatement().executeQuery(getDbVersionQuery);
-        if (resultSet.next()) {
-            return resultSet.getInt(1);
-        }
-        return 0;
+                .max(Comparator.comparingInt(ChangeSet::version))
+                .map(ChangeSet::version);
     }
 }
