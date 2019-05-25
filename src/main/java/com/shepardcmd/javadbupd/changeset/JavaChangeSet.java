@@ -1,10 +1,11 @@
 package com.shepardcmd.javadbupd.changeset;
 
+import java.sql.Connection;
 import java.util.Map;
 
 public interface JavaChangeSet {
 
     int version();
 
-    void execute(Map<String, Object> dependencies);
+    boolean execute(Connection connection, Map<String, Object> dependencies);
 }

@@ -2,10 +2,13 @@ package com.shepardcmd.javadbupd.changeset;
 
 import com.shepardcmd.javadbupd.ChangeSet;
 import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
+import java.sql.Connection;
 import java.util.Map;
 
 @RequiredArgsConstructor
+@ToString
 public class JavaChangeSetWrapper implements ChangeSet {
     private final JavaChangeSet javaChangeSet;
     private final Map<String, Object> dependencies;
@@ -21,7 +24,7 @@ public class JavaChangeSetWrapper implements ChangeSet {
     }
 
     @Override
-    public void execute() {
-        javaChangeSet.execute(dependencies);
+    public boolean execute(Connection connection) {
+        return javaChangeSet.execute(connection, dependencies);
     }
 }

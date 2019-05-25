@@ -36,15 +36,27 @@ public class DbUpdater {
                 checkExitOnError();
                 return;
             }
+            connection.setAutoCommit(false);
             for (ChangeSet changeSet : changeSets) {
                 log.debug("Running change set {} with version {}", changeSet.name(), changeSet.version());
                 Date startTime = new Date();
                 try {
-                    changeSet.execute();
-                    historyWriter.saveUpdateResult(new UpdateResult(changeSet.version(), changeSet.name(), startTime, new Date(), true));
+                    if (changeSet.execute(connection)) {
+                        historyWriter.saveUpdateResult(new UpdateResult(changeSet.version(), changeSet.name(), startTime, new Date(), true));
+                        connection.commit();
+                    } else {
+                        log.error("Change set {} execution failed!", changeSet.name());
+                        connection.rollback();
+                        historyWriter.saveUpdateResult(new UpdateResult(changeSet.version(), changeSet.name(), startTime, new Date(), false));
+                        connection.commit();
+                        checkExitOnError();
+                        return;
+                    }
                 } catch (Throwable t) {
                     log.error("Error during change set {} execution: {}", changeSet.name(), t);
+                    connection.rollback();
                     historyWriter.saveUpdateResult(new UpdateResult(changeSet.version(), changeSet.name(), startTime, new Date(), false));
+                    connection.commit();
                     checkExitOnError();
                     return;
                 }

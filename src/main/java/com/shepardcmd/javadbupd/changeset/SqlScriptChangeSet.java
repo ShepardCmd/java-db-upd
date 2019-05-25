@@ -1,17 +1,18 @@
 package com.shepardcmd.javadbupd.changeset;
 
 import com.shepardcmd.javadbupd.ChangeSet;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
-import javax.sql.DataSource;
 import java.sql.Connection;
 
-@AllArgsConstructor
+@RequiredArgsConstructor
+@ToString
 public class SqlScriptChangeSet implements ChangeSet {
-    private final Connection connection;
     private final String scriptUrl;
     private final boolean fromResources;
     private final int version;
+
 
     @Override
     public int version() {
@@ -24,7 +25,7 @@ public class SqlScriptChangeSet implements ChangeSet {
     }
 
     @Override
-    public void execute() {
-
+    public boolean execute(Connection connection) {
+        return false;
     }
 }
